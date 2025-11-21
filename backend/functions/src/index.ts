@@ -13,9 +13,11 @@ import { vehiclesApi } from "./api/vehicles";
 import { devicesApi } from "./api/devices";
 import { alertsApi } from "./api/alerts";
 import { dashboardApi } from "./api/dashboard";
+import { createOrganization, inviteUser, acceptInvitation, updateUserRole } from "./api/auth";
 
 // Import Firestore triggers
 import { onFuelReadingCreated } from "./triggers/alertTrigger";
+import { onUserCreated } from "./triggers/authTrigger";
 
 /**
  * HTTP API Endpoints
@@ -53,9 +55,19 @@ export const api = functions.https.onRequest(async (req, res) => {
 });
 
 /**
+ * Auth API (Callable Functions)
+ */
+export { createOrganization, inviteUser, acceptInvitation, updateUserRole };
+
+/**
  * Firestore Triggers
  */
 export const detectTheft = onFuelReadingCreated;
+
+/**
+ * Auth Triggers
+ */
+export const processUserSignup = onUserCreated;
 
 /**
  * Scheduled Functions

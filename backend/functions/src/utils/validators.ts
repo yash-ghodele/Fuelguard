@@ -87,3 +87,23 @@ export const alertsQuerySchema = z.object({
     endTime: z.number().optional(),
     limit: z.number().int().min(1).max(100).optional(),
 });
+
+// Auth Schemas
+export const createOrganizationSchema = z.object({
+    name: z.string().min(1).max(100),
+    plan: z.enum(["free", "pro", "enterprise"]).default("free"),
+});
+
+export const inviteUserSchema = z.object({
+    email: z.string().email(),
+    role: z.enum(["admin", "manager", "viewer"]),
+});
+
+export const acceptInvitationSchema = z.object({
+    inviteId: z.string().min(1),
+});
+
+export const updateUserRoleSchema = z.object({
+    userId: z.string().min(1),
+    role: z.enum(["admin", "manager", "viewer"]),
+});

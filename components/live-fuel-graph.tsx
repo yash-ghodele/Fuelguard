@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Button } from "@/components/ui/button"
 import { ChartTooltip } from "@/components/ui/chart"
@@ -40,7 +40,7 @@ const timeRanges = [
 
 export default function LiveFuelGraph() {
   const [selectedRange, setSelectedRange] = useState(timeRanges[1])
-  const data = generateMockData(selectedRange.hours)
+  const data = useMemo(() => generateMockData(selectedRange.hours), [selectedRange.hours])
 
   const formatXAxis = (tickItem: string) => {
     const date = new Date(tickItem)

@@ -1,34 +1,32 @@
-import { Request, Response } from "firebase-functions";
-import { db, auth } from "../index";
+import { Request, Response } from "express";
+import { db } from "../index";
 import { createVehicleSchema, updateVehicleSchema } from "../utils/validators";
 import { Vehicle } from "../types";
+import { verifyAuth, AuthRequest } from "../utils/middleware";
 
 /**
  * Vehicles API Handler
  */
 export async function vehiclesApi(req: Request, res: Response) {
+    // Run middleware manually since we are in a single function handler
+    // In a real Express app, this would be app.use(verifyAuth)
+    await new Promise<void>((resolve) => {
+        verifyAuth(req, res, () => resolve());
+    });
+
+    if (res.headersSent) return;
+
+    const user = (req as AuthRequest).user;
+    if (!user || !user.orgId) {
+        res.status(403).json({ error: "Forbidden: Organization access required" });
+        return;
+    }
+
+    const organizationId = user.orgId;
     const method = req.method;
     const pathParts = req.path.split("/").filter((p) => p);
 
     try {
-        // Verify authentication
-        const token = req.headers.authorization?.split("Bearer ")[1];
-        if (!token) {
-            res.status(401).json({ error: "Unauthorized" });
-            return;
-        }
-
-        const decodedToken = await auth.verifyIdToken(token);
-        const userId = decodedToken.uid;
-
-        // Get user to check organization
-        const userDoc = await db.collection("users").doc(userId).get();
-        if (!userDoc.exists) {
-            res.status(403).json({ error: "User not found" });
-            return;
-        }
-        const organizationId = userDoc.data()?.organizationId;
-
         // GET /vehicles - List all vehicles
         if (method === "GET" && pathParts.length === 1) {
             const snapshot = await db.collection("vehicles")
@@ -61,6 +59,12 @@ export async function vehiclesApi(req: Request, res: Response) {
 
         // POST /vehicles - Create vehicle
         if (method === "POST" && pathParts.length === 1) {
+            // Check for manager/admin role
+            if (user.role !== "admin" && user.role !== "manager") {
+                res.status(403).json({ error: "Forbidden: Insufficient permissions" });
+                return;
+            }
+
             const validation = createVehicleSchema.safeParse(req.body);
             if (!validation.success) {
                 res.status(400).json({ error: "Invalid input", details: validation.error });
@@ -82,6 +86,12 @@ export async function vehiclesApi(req: Request, res: Response) {
 
         // PUT /vehicles/:id - Update vehicle
         if (method === "PUT" && pathParts.length === 2) {
+            // Check for manager/admin role
+            if (user.role !== "admin" && user.role !== "manager") {
+                res.status(403).json({ error: "Forbidden: Insufficient permissions" });
+                return;
+            }
+
             const vehicleId = pathParts[1];
             const doc = await db.collection("vehicles").doc(vehicleId).get();
 
@@ -108,6 +118,12 @@ export async function vehiclesApi(req: Request, res: Response) {
 
         // DELETE /vehicles/:id - Delete vehicle
         if (method === "DELETE" && pathParts.length === 2) {
+            // Check for admin role
+            if (user.role !== "admin") {
+                res.status(403).json({ error: "Forbidden: Admin access required" });
+                return;
+            }
+
             const vehicleId = pathParts[1];
             const doc = await db.collection("vehicles").doc(vehicleId).get();
 
@@ -124,6 +140,14 @@ export async function vehiclesApi(req: Request, res: Response) {
         // GET /vehicles/:id/fuel-history - Get fuel reading history
         if (method === "GET" && pathParts.length === 3 && pathParts[2] === "fuel-history") {
             const vehicleId = pathParts[1];
+
+            // Verify vehicle belongs to org first
+            const vehicleDoc = await db.collection("vehicles").doc(vehicleId).get();
+            if (!vehicleDoc.exists || vehicleDoc.data()?.organizationId !== organizationId) {
+                res.status(404).json({ error: "Vehicle not found" });
+                return;
+            }
+
             const limit = parseInt(req.query.limit as string) || 100;
             const startTime = parseInt(req.query.startTime as string) || (Date.now() - 7 * 24 * 60 * 60 * 1000);
 

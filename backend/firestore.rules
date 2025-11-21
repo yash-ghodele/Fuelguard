@@ -2,77 +2,114 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
+    // --- Helper Functions ---
+
+    // Check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
-    
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+
+    // Get Org ID from Custom Claims (High Performance)
+    function getOrgId() {
+      return request.auth.token.orgId;
     }
-    
+
+    // Get Role from Custom Claims
+    function getRole() {
+      return request.auth.token.role;
+    }
+
+    // Check if user belongs to the target organization
+    function isOrgMember(orgId) {
+      return isAuthenticated() && getOrgId() == orgId;
+    }
+
+    // Role Checks
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
+      return getRole() == 'admin';
     }
-    
-    function isSameOrganization(orgId) {
-      return isAuthenticated() && getUserData().organizationId == orgId;
+
+    function isManager() {
+      return getRole() == 'manager' || getRole() == 'admin';
     }
-    
-    // Users collection
+
+    // --- Collection Rules ---
+
+    // Organizations: Only members can read their own org
+    match /organizations/{orgId} {
+      allow read: if isOrgMember(orgId);
+      allow create: if isAuthenticated(); // Allow creating a new org (onboarding)
+      allow update: if isOrgMember(orgId) && isAdmin();
+      allow delete: if false; // Prevent accidental deletion
+    }
+
+    // Invitations: Admin only for creation, Public read for validation (by ID)
+    match /invitations/{inviteId} {
+      allow read: if isAuthenticated(); // Need to read to accept
+      allow create: if isOrgMember(request.resource.data.organizationId) && isAdmin();
+      allow update: if isOrgMember(resource.data.organizationId) && isAdmin(); // Cancel invite
+      allow delete: if isOrgMember(resource.data.organizationId) && isAdmin();
+    }
+
+    // Users: Users can read themselves, Admins can read/manage their org members
     match /users/{userId} {
-      allow read: if isAuthenticated() && 
-        (request.auth.uid == userId || isSameOrganization(resource.data.organizationId));
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && request.auth.uid == userId;
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isOrgMember(resource.data.organizationId)
+      );
+      allow create: if isAuthenticated(); // Initial profile creation
+      allow update: if isAuthenticated() && request.auth.uid == userId; // Self-update profile
+      allow delete: if isOrgMember(resource.data.organizationId) && isAdmin();
     }
-    
-    // Vehicles collection
+
+    // Vehicles: RBAC applied
     match /vehicles/{vehicleId} {
-      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow create: if isAuthenticated() && isSameOrganization(request.resource.data.organizationId);
-      allow update: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow delete: if isAdmin() && isSameOrganization(resource.data.organizationId);
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if isOrgMember(request.resource.data.organizationId) && isManager();
+      allow update: if isOrgMember(resource.data.organizationId) && isManager();
+      allow delete: if isOrgMember(resource.data.organizationId) && isAdmin();
     }
-    
-    // Devices collection
+
+    // Devices: RBAC applied
     match /devices/{deviceId} {
-      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow create: if isAuthenticated() && isSameOrganization(request.resource.data.organizationId);
-      allow update: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow delete: if isAdmin() && isSameOrganization(resource.data.organizationId);
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if isOrgMember(request.resource.data.organizationId) && isManager();
+      allow update: if isOrgMember(resource.data.organizationId) && isManager();
+      allow delete: if isOrgMember(resource.data.organizationId) && isAdmin();
     }
-    
-    // Fuel readings collection
+
+    // Fuel Readings: Read-only for users, Write for Bridge (handled via Admin SDK usually, but if using client SDK need rules)
+    // Note: Bridge usually uses Admin SDK which bypasses rules. 
+    // If devices write directly (not recommended), we need a different auth strategy.
+    // Assuming Bridge writes via Admin SDK.
     match /fuelReadings/{readingId} {
-      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow create: if true; // Allow MQTT bridge to write
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if false; // Only Admin SDK (Bridge)
       allow update, delete: if false; // Immutable
     }
-    
-    // Alerts collection
+
+    // Alerts: Read-only for most, Managers can acknowledge/resolve
     match /alerts/{alertId} {
-      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow create: if true; // Allow system to create alerts
-      allow update: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
-      allow delete: if isAdmin() && isSameOrganization(resource.data.organizationId);
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if false; // Only System/Bridge
+      allow update: if isOrgMember(resource.data.organizationId) && isManager();
+      allow delete: if isOrgMember(resource.data.organizationId) && isAdmin();
     }
-    
-    // Notifications collection
+
+    // Notifications: User specific
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
-      allow create: if true; // Allow system to create notifications
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if false; // System only
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId; // Mark read
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
     }
-    
-    // Commands collection
+
+    // Commands: Managers can send commands
     match /commands/{commandId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if true; // Allow MQTT bridge to update status
-      allow delete: if isAdmin();
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if isOrgMember(request.resource.data.organizationId) && isManager();
+      allow update: if false; // Status updates via Bridge only
+      allow delete: if isOrgMember(resource.data.organizationId) && isAdmin();
     }
   }
 }

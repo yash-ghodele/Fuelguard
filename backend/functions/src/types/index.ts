@@ -43,7 +43,7 @@ export interface Vehicle {
     model: string;
     year: number;
     tankCapacity: number; // liters
-    deviceId: string;
+    deviceId?: string;
     driver?: string;
     status: "online" | "offline";
     organizationId: string;
@@ -94,7 +94,7 @@ export interface User {
     id: string; // Firebase UID
     email: string;
     name: string;
-    role: "admin" | "operator" | "viewer";
+    role: "admin" | "manager" | "operator" | "viewer";
     organizationId: string;
     notificationPreferences: {
         email: boolean;
@@ -172,4 +172,24 @@ export interface DashboardStats {
         offline: number;
         error: number;
     };
+}
+
+export interface Organization {
+    id: string;
+    name: string;
+    plan: "free" | "pro" | "enterprise";
+    createdAt: number;
+    updatedAt: number;
+    ownerId: string;
+}
+
+export interface Invitation {
+    id: string;
+    email: string;
+    organizationId: string;
+    role: "admin" | "manager" | "viewer";
+    status: "pending" | "accepted" | "expired";
+    invitedBy: string;
+    createdAt: number;
+    expiresAt: number;
 }
