@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+    
+    function isSameOrganization(orgId) {
+      return isAuthenticated() && getUserData().organizationId == orgId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId || isSameOrganization(resource.data.organizationId));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+    
+    // Vehicles collection
+    match /vehicles/{vehicleId} {
+      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow create: if isAuthenticated() && isSameOrganization(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow delete: if isAdmin() && isSameOrganization(resource.data.organizationId);
+    }
+    
+    // Devices collection
+    match /devices/{deviceId} {
+      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow create: if isAuthenticated() && isSameOrganization(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow delete: if isAdmin() && isSameOrganization(resource.data.organizationId);
+    }
+    
+    // Fuel readings collection
+    match /fuelReadings/{readingId} {
+      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow create: if true; // Allow MQTT bridge to write
+      allow update, delete: if false; // Immutable
+    }
+    
+    // Alerts collection
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow create: if true; // Allow system to create alerts
+      allow update: if isAuthenticated() && isSameOrganization(resource.data.organizationId);
+      allow delete: if isAdmin() && isSameOrganization(resource.data.organizationId);
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow create: if true; // Allow system to create notifications
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    
+    // Commands collection
+    match /commands/{commandId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if true; // Allow MQTT bridge to update status
+      allow delete: if isAdmin();
+    }
+  }
+}
