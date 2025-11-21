@@ -1,76 +1,112 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+"use client";
 
-interface FuelReading {
+import { useEffect, useState } from "react";
+import { collection, query, where, orderBy, limit, onSnapshot, QuerySnapshot, DocumentData, Timestamp } from "firebase/firestore";
+import { db, isDemoMode } from "@/lib/firebase";
+
+export interface FuelReading {
     id: string;
     vehicleId: string;
-    deviceId: string;
-    timestamp: number;
-    fuelLevel: {
-        liters: number;
-        percentage: number;
-    };
-    location: {
+    fuelLevel: number;
+    timestamp: Date;
+    location?: {
         lat: number;
-        lon: number;
-        speed: number;
-        satellites: number;
-    } | null;
-    sensors: {
-        ultrasonic: { distance: number; valid: boolean };
-        float: { value: number; valid: boolean };
-        gps: { fix: boolean; satellites: number; speed: number };
-        tamper: boolean;
-        battery: number;
-        signalStrength: number;
+        lng: number;
     };
+    deviceId: string;
 }
 
-/**
- * React hook for real-time fuel readings
- */
-export function useFuelReadings(vehicleId: string, maxReadings = 100) {
+// Generate mock data for demo mode
+function generateMockReadings(vehicleId: string, hours: number = 24): FuelReading[] {
+    const readings: FuelReading[] = [];
+    const now = Date.now();
+    const interval = (hours * 60 * 60 * 1000) / 50; // 50 data points
+
+    for (let i = 0; i < 50; i++) {
+        readings.push({
+            id: `reading-${vehicleId}-${i}`,
+            vehicleId,
+            fuelLevel: 50 + Math.sin(i / 5) * 30 + Math.random() * 10,
+            timestamp: new Date(now - (49 - i) * interval),
+            location: {
+                lat: 19.076 + (Math.random() - 0.5) * 0.1,
+                lng: 72.8777 + (Math.random() - 0.5) * 0.1,
+            },
+            deviceId: `ESP32-${vehicleId.split('-')[1]}`,
+        });
+    }
+    return readings;
+}
+
+interface UseFuelReadingsOptions {
+    vehicleId: string;
+    timeRange?: number; // hours
+    maxReadings?: number;
+}
+
+export function useFuelReadings(options: UseFuelReadingsOptions) {
+    const { vehicleId, timeRange = 24, maxReadings = 100 } = options;
     const [readings, setReadings] = useState<FuelReading[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!vehicleId) {
+        if (isDemoMode) {
+            // Use mock data in demo mode
+            const mockReadings = generateMockReadings(vehicleId, timeRange);
+            setReadings(mockReadings);
             setLoading(false);
             return;
         }
 
-        const readingsRef = collection(db, 'fuelReadings');
-        const readingsQuery = query(
+        if (!vehicleId) {
+            setReadings([]);
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        const readingsRef = collection(db, "fuelReadings");
+        const startTime = Timestamp.fromDate(new Date(Date.now() - timeRange * 60 * 60 * 1000));
+
+        const q = query(
             readingsRef,
-            where('vehicleId', '==', vehicleId),
-            orderBy('timestamp', 'desc'),
+            where("vehicleId", "==", vehicleId),
+            where("timestamp", ">=", startTime),
+            orderBy("timestamp", "desc"),
             limit(maxReadings)
         );
 
         const unsubscribe = onSnapshot(
-            readingsQuery,
-            (snapshot) => {
-                const readingData = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                })) as FuelReading[];
-
-                setReadings(readingData);
+            q,
+            (snapshot: QuerySnapshot<DocumentData>) => {
+                const readingsData: FuelReading[] = snapshot.docs.map((doc) => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        vehicleId: data.vehicleId,
+                        fuelLevel: data.fuelLevel || 0,
+                        timestamp: data.timestamp?.toDate() || new Date(),
+                        location: data.location,
+                        deviceId: data.deviceId,
+                    };
+                });
+                // Sort by timestamp ascending for chart display
+                readingsData.reverse();
+                setReadings(readingsData);
                 setLoading(false);
             },
             (err) => {
-                setError(err as Error);
+                console.error("Error fetching fuel readings:", err);
+                setError(err.message);
                 setLoading(false);
             }
         );
 
         return () => unsubscribe();
-    }, [vehicleId, maxReadings]);
+    }, [vehicleId, timeRange, maxReadings]);
 
-    // Get latest reading
-    const latestReading = readings.length > 0 ? readings[0] : null;
-
-    return { readings, latestReading, loading, error };
+    return { readings, loading, error };
 }

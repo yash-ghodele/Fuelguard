@@ -1,104 +1,108 @@
-"use client"
+"use client";
 
-import { useState, useMemo } from "react"
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Button } from "@/components/ui/button"
-import { ChartTooltip } from "@/components/ui/chart"
+import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useFuelReadings } from "@/hooks/useFuelReadings";
+import { useVehicles } from "@/hooks/useVehicles";
+import { useState } from "react";
 
-// Generate mock data for the fuel graph
-const generateMockData = (hours: number) => {
-  const data = []
-  let value = 85
+export function LiveFuelGraph() {
+    const { vehicles } = useVehicles();
+    const [selectedVehicleId, setSelectedVehicleId] = useState<string>(vehicles[0]?.id || "veh-001");
+    const [timeRange, setTimeRange] = useState<number>(24);
 
-  for (let i = 0; i < hours; i++) {
-    // Add some randomness to the fuel level
-    value = Math.max(0, Math.min(100, value + (Math.random() - 0.5) * 10))
+    const { readings, loading, error } = useFuelReadings({
+        vehicleId: selectedVehicleId,
+        timeRange,
+    });
 
-    // Add sudden drops to simulate potential theft
-    if (i === 8 || i === 20) {
-      value -= 15
+    const chartData = useMemo(() => {
+        return readings.map((reading) => ({
+            time: new Date(reading.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            fuel: Math.round(reading.fuelLevel),
+        }));
+    }, [readings]);
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Live Fuel Monitoring</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-pulse text-muted-foreground">Loading fuel data...</div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
     }
 
-    const timestamp = new Date()
-    timestamp.setHours(timestamp.getHours() - (hours - i))
+    if (error) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Live Fuel Monitoring</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-sm text-destructive">Error loading fuel data: {error}</div>
+                </CardContent>
+            </Card>
+        );
+    }
 
-    data.push({
-      timestamp: timestamp.toISOString(),
-      level: Math.round(value),
-    })
-  }
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <span>Live Fuel Monitoring</span>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedVehicleId} onValueChange={setSelectedVehicleId}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select vehicle" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {vehicles.map((vehicle) => (
+                                    <SelectItem key={vehicle.id} value={vehicle.id}>
+                                        {vehicle.plateNumber}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-  return data
-}
-
-// Time range options
-const timeRanges = [
-  { label: "1h", hours: 1 },
-  { label: "24h", hours: 24 },
-  { label: "7d", hours: 24 * 7 },
-]
-
-export default function LiveFuelGraph() {
-  const [selectedRange, setSelectedRange] = useState(timeRanges[1])
-  const data = useMemo(() => generateMockData(selectedRange.hours), [selectedRange.hours])
-
-  const formatXAxis = (tickItem: string) => {
-    const date = new Date(tickItem)
-    return selectedRange.hours <= 24
-      ? date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      : date.toLocaleDateString([], { month: "short", day: "numeric" })
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <div className="text-2xl font-bold">67%</div>
-          <p className="text-xs text-muted-foreground">Average fuel level across fleet</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {timeRanges.map((range) => (
-            <Button
-              key={range.label}
-              variant={selectedRange.label === range.label ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedRange(range)}
-            >
-              {range.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div className="h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <XAxis
-              dataKey="timestamp"
-              tickFormatter={formatXAxis}
-              tick={{ fontSize: 12 }}
-              axisLine={{ stroke: "#ddd" }}
-              tickLine={{ stroke: "#ddd" }}
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={{ fontSize: 12 }}
-              axisLine={{ stroke: "#ddd" }}
-              tickLine={{ stroke: "#ddd" }}
-              label={{ value: "Fuel %", angle: -90, position: "insideLeft", style: { textAnchor: "middle" } }}
-            />
-            <Tooltip content={<ChartTooltip />} />
-            <Line
-              type="monotone"
-              dataKey="level"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  )
+                        <Select value={timeRange.toString()} onValueChange={(v) => setTimeRange(Number(v))}>
+                            <SelectTrigger className="w-[120px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="6">6 hours</SelectItem>
+                                <SelectItem value="12">12 hours</SelectItem>
+                                <SelectItem value="24">24 hours</SelectItem>
+                                <SelectItem value="48">48 hours</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="time" />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip />
+                        <Line
+                            type="monotone"
+                            dataKey="fuel"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2}
+                            dot={false}
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </CardContent>
+        </Card>
+    );
 }

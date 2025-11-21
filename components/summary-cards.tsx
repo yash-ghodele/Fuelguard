@@ -1,168 +1,158 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Car, Droplet, ShieldAlert, Clock, RefreshCw } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { api } from "@/lib/api"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Truck, Droplets, AlertTriangle, Activity, RefreshCw } from "lucide-react";
+import { api } from "@/lib/api";
+import { isDemoMode } from "@/lib/firebase";
 
-interface DashboardStats {
-  totalVehicles: number
-  avgFuelLevel: number
-  activeAlerts: number
-  onlineVehicles: number
+interface SummaryData {
+    totalVehicles: number;
+    avgFuelLevel: number;
+    activeAlerts: number;
+    onlineDevices: number;
 }
 
-// Template data shown on initial load
-const TEMPLATE_DATA: DashboardStats = {
-  totalVehicles: 42,
-  avgFuelLevel: 67,
-  activeAlerts: 3,
-  onlineVehicles: 38,
-}
+const TEMPLATE_DATA: SummaryData = {
+    totalVehicles: 42,
+    avgFuelLevel: 67,
+    activeAlerts: 3,
+    onlineDevices: 38,
+};
 
-export default function SummaryCards() {
-  const [stats, setStats] = useState<DashboardStats>(TEMPLATE_DATA)
-  const [loading, setLoading] = useState(false)
-  const [autoRefresh, setAutoRefresh] = useState(false)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [cachedData, setCachedData] = useState<DashboardStats | null>(null)
+export function SummaryCards() {
+    const [data, setData] = useState<SummaryData>(TEMPLATE_DATA);
+    const [loading, setLoading] = useState(false);
+    const [autoRefresh, setAutoRefresh] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchData = async () => {
-    setLoading(true)
-    try {
-      const response: any = await api.dashboard.summary()
-      const newStats = {
-        totalVehicles: response.stats.totalVehicles,
-        avgFuelLevel: Math.round(response.stats.avgFuelLevel),
-        activeAlerts: response.stats.activeAlerts,
-        onlineVehicles: response.stats.onlineVehicles,
-      }
-      setStats(newStats)
-      setCachedData(newStats)
-      setLastUpdated(new Date())
-    } catch (error: any) {
-      console.error("Failed to load dashboard stats:", error)
-      // Fallback to template data on error
-      setStats(TEMPLATE_DATA)
-    } finally {
-      setLoading(false)
-    }
-  }
+    const fetchData = async () => {
+        if (isDemoMode) {
+            // In demo mode, use template data with slight variations
+            setData({
+                totalVehicles: TEMPLATE_DATA.totalVehicles + Math.floor(Math.random() * 3),
+                avgFuelLevel: TEMPLATE_DATA.avgFuelLevel + Math.floor(Math.random() * 10 - 5),
+                activeAlerts: TEMPLATE_DATA.activeAlerts + Math.floor(Math.random() * 2),
+                onlineDevices: TEMPLATE_DATA.onlineDevices + Math.floor(Math.random() * 5 - 2),
+            });
+            setLastUpdated(new Date());
+            return;
+        }
 
-  useEffect(() => {
-    if (autoRefresh) {
-      // Fetch immediately when turned on
-      fetchData()
+        setLoading(true);
+        try {
+            const response = await api.dashboard.summary();
+            if (response.success && response.data) {
+                setData(response.data);
+                setLastUpdated(new Date());
+            }
+        } catch (error) {
+            console.error("Error fetching dashboard summary:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      // Then fetch every 30 seconds
-      const interval = setInterval(fetchData, 30000)
-      return () => clearInterval(interval)
-    } else if (cachedData) {
-      // Show cached data when auto-refresh is off
-      setStats(cachedData)
-    }
-  }, [autoRefresh])
+    useEffect(() => {
+        if (autoRefresh) {
+            fetchData();
+            const interval = setInterval(fetchData, 30000); // 30 seconds
+            return () => clearInterval(interval);
+        }
+    }, [autoRefresh]);
 
-  const handleToggle = (checked: boolean) => {
-    setAutoRefresh(checked)
-    if (!checked && cachedData) {
-      // When turning off, show last cached data
-      setStats(cachedData)
-    }
-  }
+    const handleManualRefresh = () => {
+        fetchData();
+    };
 
-  const handleManualRefresh = () => {
-    fetchData()
-  }
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <Switch
+                            id="auto-refresh"
+                            checked={autoRefresh}
+                            onCheckedChange={setAutoRefresh}
+                        />
+                        <Label htmlFor="auto-refresh" className="cursor-pointer">
+                            Auto-refresh {autoRefresh ? "ON" : "OFF"}
+                        </Label>
+                    </div>
+                    {!autoRefresh && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleManualRefresh}
+                            disabled={loading}
+                        >
+                            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                            Refresh
+                        </Button>
+                    )}
+                </div>
+                {lastUpdated && (
+                    <p className="text-sm text-muted-foreground">
+                        Last updated: {lastUpdated.toLocaleTimeString()}
+                    </p>
+                )}
+            </div>
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Switch id="auto-refresh" checked={autoRefresh} onCheckedChange={handleToggle} />
-            <Label htmlFor="auto-refresh" className="cursor-pointer">
-              Auto-refresh {autoRefresh ? "ON" : "OFF"}
-            </Label>
-          </div>
-          {!autoRefresh && (
-            <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          )}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Vehicles</CardTitle>
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.totalVehicles}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {data.onlineDevices} online
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Avg Fuel Level</CardTitle>
+                        <Droplets className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.avgFuelLevel}%</div>
+                        <Progress value={data.avgFuelLevel} className="mt-2" />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
+                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.activeAlerts}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {data.activeAlerts > 0 ? "Requires attention" : "All clear"}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Online Devices</CardTitle>
+                        <Activity className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{data.onlineDevices}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {Math.round((data.onlineDevices / data.totalVehicles) * 100)}% uptime
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-        {lastUpdated && (
-          <p className="text-xs text-muted-foreground">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </p>
-        )}
-      </div>
-
-      {loading && !autoRefresh ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="flex flex-row items-center justify-between p-6">
-                <div className="h-12 w-24 animate-pulse bg-muted rounded" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="flex flex-row items-center justify-between p-6">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Vehicles</p>
-                <p className="text-2xl font-bold">{stats.totalVehicles}</p>
-              </div>
-              <div className="rounded-full bg-primary/10 p-3">
-                <Car className="h-6 w-6 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-row items-center justify-between p-6">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg. Fuel Level</p>
-                <p className="text-2xl font-bold">{stats.avgFuelLevel}%</p>
-              </div>
-              <div className="rounded-full bg-blue-500/10 p-3">
-                <Droplet className="h-6 w-6 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-row items-center justify-between p-6">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Alerts</p>
-                <p className="text-2xl font-bold">{stats.activeAlerts}</p>
-              </div>
-              <div className="rounded-full bg-red-500/10 p-3">
-                <ShieldAlert className="h-6 w-6 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-row items-center justify-between p-6">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Online Vehicles</p>
-                <p className="text-2xl font-bold">{stats.onlineVehicles}</p>
-              </div>
-              <div className="rounded-full bg-green-500/10 p-3">
-                <Clock className="h-6 w-6 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
-  )
+    );
 }

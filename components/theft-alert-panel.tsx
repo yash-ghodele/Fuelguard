@@ -1,97 +1,136 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { MapPin, Shield, ShieldAlert } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { useAlerts } from "@/hooks/useAlerts";
+import { api } from "@/lib/api";
+import { useState } from "react";
 
-// Mock theft alert data
-const theftAlerts = [
-  {
-    id: "alert-1",
-    vehicleId: "VEH-101",
-    timestamp: "Today, 10:23 AM",
-    location: "Dallas, TX",
-    fuelLoss: 12.5,
-    status: "active",
-  },
-  {
-    id: "alert-2",
-    vehicleId: "VEH-456",
-    timestamp: "Yesterday, 8:45 PM",
-    location: "Chicago, IL",
-    fuelLoss: 8.2,
-    status: "resolved",
-  },
-  {
-    id: "alert-3",
-    vehicleId: "VEH-789",
-    timestamp: "Yesterday, 3:12 PM",
-    location: "Los Angeles, CA",
-    fuelLoss: 15.0,
-    status: "active",
-  },
-]
+export function TheftAlertPanel() {
+    const { alerts, loading, error } = useAlerts({ status: "active" });
+    const [resolvingId, setResolvingId] = useState<string | null>(null);
 
-export default function TheftAlertPanel() {
-  const [alerts, setAlerts] = useState(theftAlerts)
+    const handleResolve = async (alertId: string) => {
+        setResolvingId(alertId);
+        try {
+            await api.alerts.resolve(alertId);
+        } catch (error) {
+            console.error("Error resolving alert:", error);
+        } finally {
+            setResolvingId(null);
+        }
+    };
 
-  const resolveAlert = (alertId: string) => {
-    setAlerts(alerts.map((alert) => (alert.id === alertId ? { ...alert, status: "resolved" } : alert)))
-  }
+    const getSeverityColor = (severity: string) => {
+        switch (severity) {
+            case "critical":
+                return "bg-red-500 hover:bg-red-600";
+            case "warning":
+                return "bg-yellow-500 hover:bg-yellow-600";
+            case "info":
+                return "bg-blue-500 hover:bg-blue-600";
+            default:
+                return "bg-gray-500";
+        }
+    };
 
-  return (
-    <ScrollArea className="h-[280px]">
-      <div className="space-y-4">
-        {alerts.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center p-4">
-            <Shield className="mb-2 h-10 w-10 text-muted-foreground" />
-            <h3 className="font-medium">No alerts</h3>
-            <p className="text-center text-sm text-muted-foreground">All vehicles are secure</p>
-          </div>
-        ) : (
-          alerts.map((alert) => (
-            <div
-              key={alert.id}
-              className={`rounded-lg border p-3 ${
-                alert.status === "active" ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30" : ""
-              }`}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert
-                    className={`h-4 w-4 ${alert.status === "active" ? "text-red-500" : "text-muted-foreground"}`}
-                  />
-                  <span className="font-medium">{alert.vehicleId}</span>
+    const getTypeIcon = (type: string) => {
+        switch (type) {
+            case "theft":
+                return <AlertTriangle className="h-4 w-4" />;
+            case "low_fuel":
+                return <AlertTriangle className="h-4 w-4" />;
+            default:
+                return <AlertTriangle className="h-4 w-4" />;
+        }
+    };
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Active Alerts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-pulse text-muted-foreground">Loading alerts...</div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    if (error) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Active Alerts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-sm text-destructive">Error loading alerts: {error}</div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <span>Active Alerts</span>
+                    <Badge variant="destructive">{alerts.length}</Badge>
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {alerts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <CheckCircle className="h-12 w-12 text-green-500 mb-2" />
+                            <p className="text-sm text-muted-foreground">No active alerts</p>
+                            <p className="text-xs text-muted-foreground">All systems operating normally</p>
+                        </div>
+                    ) : (
+                        alerts.map((alert) => (
+                            <div
+                                key={alert.id}
+                                className="flex items-start justify-between p-3 rounded-lg border border-border"
+                            >
+                                <div className="flex items-start gap-3 flex-1">
+                                    <div className={`p-2 rounded-full ${getSeverityColor(alert.severity)}`}>
+                                        {getTypeIcon(alert.type)}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Badge variant="outline" className="text-xs">
+                                                {alert.type.replace("_", " ").toUpperCase()}
+                                            </Badge>
+                                            <Badge className={getSeverityColor(alert.severity)}>
+                                                {alert.severity}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-sm font-medium">{alert.message}</p>
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                            <Clock className="h-3 w-3" />
+                                            <span>{new Date(alert.timestamp).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleResolve(alert.id)}
+                                    disabled={resolvingId === alert.id}
+                                >
+                                    {resolvingId === alert.id ? "Resolving..." : "Resolve"}
+                                </Button>
+                            </div>
+                        ))
+                    )}
                 </div>
-                <Badge variant={alert.status === "active" ? "destructive" : "outline"}>
-                  {alert.status === "active" ? "Active" : "Resolved"}
-                </Badge>
-              </div>
-
-              <div className="space-y-1 text-sm">
-                <div className="text-muted-foreground">{alert.timestamp}</div>
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>{alert.location}</span>
-                </div>
-                <div className="font-medium text-red-600 dark:text-red-400">
-                  Fuel Loss: {alert.fuelLoss.toFixed(1)} L
-                </div>
-              </div>
-
-              {alert.status === "active" && (
-                <div className="mt-2 flex justify-end">
-                  <Button size="sm" variant="outline" onClick={() => resolveAlert(alert.id)}>
-                    Resolve
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </ScrollArea>
-  )
+            </CardContent>
+        </Card>
+    );
 }

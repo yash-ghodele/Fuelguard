@@ -1,60 +1,112 @@
-import { auth as firebaseAuth } from './firebase';
+import { auth } from "./firebase";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://your-project.cloudfunctions.net/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/fuelguard/us-central1";
 
-async function getAuthToken(): Promise<string | null> {
-    const auth: any = firebaseAuth;
-    const user = auth?.currentUser;
-    if (!user) return null;
-    return await user.getIdToken();
+interface ApiResponse<T = any> {
+    success: boolean;
+    data?: T;
+    error?: string;
 }
 
-async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const token = await getAuthToken();
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...(options.headers as Record<string, string>),
-    };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+class ApiClient {
+    private baseUrl: string;
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(error.error || error.message || 'Request failed');
+    constructor(baseUrl: string) {
+        this.baseUrl = baseUrl;
     }
-    return response.json();
+
+    private async getAuthToken(): Promise<string | null> {
+        try {
+            if (auth.currentUser) {
+                return await auth.currentUser.getIdToken();
+            }
+            return null;
+        } catch (error) {
+            console.error("Error getting auth token:", error);
+            return null;
+        }
+    }
+
+    private async request<T>(
+        endpoint: string,
+        options: RequestInit = {}
+    ): Promise<ApiResponse<T>> {
+        try {
+            const token = await this.getAuthToken();
+            const headers: HeadersInit = {
+                "Content-Type": "application/json",
+                ...options.headers,
+            };
+
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                ...options,
+                headers,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            return { success: true, data };
+        } catch (error: any) {
+            console.error(`API Error [${endpoint}]:`, error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Dashboard API
+    dashboard = {
+        summary: () => this.request("/api/dashboard/summary"),
+        stats: (timeRange?: string) => this.request(`/api/dashboard/stats?range=${timeRange || "24h"}`),
+    };
+
+    // Vehicles API
+    vehicles = {
+        list: () => this.request("/api/vehicles"),
+        get: (id: string) => this.request(`/api/vehicles/${id}`),
+        create: (data: any) => this.request("/api/vehicles", { method: "POST", body: JSON.stringify(data) }),
+        update: (id: string, data: any) => this.request(`/api/vehicles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+        delete: (id: string) => this.request(`/api/vehicles/${id}`, { method: "DELETE" }),
+    };
+
+    // Alerts API
+    alerts = {
+        list: (filters?: { vehicleId?: string; status?: string }) => {
+            const params = new URLSearchParams(filters as any).toString();
+            return this.request(`/api/alerts${params ? `?${params}` : ""}`);
+        },
+        get: (id: string) => this.request(`/api/alerts/${id}`),
+        resolve: (id: string) => this.request(`/api/alerts/${id}/resolve`, { method: "POST" }),
+    };
+
+    // Fuel Readings API
+    fuelReadings = {
+        list: (vehicleId: string, timeRange?: string) => {
+            const params = new URLSearchParams({ vehicleId, range: timeRange || "24h" }).toString();
+            return this.request(`/api/fuel-readings?${params}`);
+        },
+        latest: (vehicleId: string) => this.request(`/api/fuel-readings/latest/${vehicleId}`),
+    };
+
+    // Devices API
+    devices = {
+        list: () => this.request("/api/devices"),
+        get: (id: string) => this.request(`/api/devices/${id}`),
+        health: (id: string) => this.request(`/api/devices/${id}/health`),
+    };
+
+    // Notifications API
+    notifications = {
+        list: () => this.request("/api/notifications"),
+        markRead: (id: string) => this.request(`/api/notifications/${id}/read`, { method: "POST" }),
+        markAllRead: () => this.request("/api/notifications/read-all", { method: "POST" }),
+    };
 }
 
-export const api = {
-    vehicles: {
-        list: () => apiRequest<{ vehicles: any[] }>('/vehicles'),
-        get: (id: string) => apiRequest<{ vehicle: any }>(`/vehicles/${id}`),
-        create: (data: any) => apiRequest<{ vehicle: any }>('/vehicles', { method: 'POST', body: JSON.stringify(data) }),
-        update: (id: string, data: any) => apiRequest<{ vehicle: any }>(`/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-        delete: (id: string) => apiRequest<{ success: boolean }>(`/vehicles/${id}`, { method: 'DELETE' }),
-        fuelHistory: (id: string, params?: { limit?: number; startTime?: number }) => {
-            const query = new URLSearchParams(params as any).toString();
-            return apiRequest<{ readings: any[] }>(`/vehicles/${id}/fuel-history?${query}`);
-        },
-    },
-    devices: {
-        list: () => apiRequest<{ devices: any[] }>('/devices'),
-        get: (id: string) => apiRequest<{ device: any }>(`/devices/${id}`),
-        register: (data: any) => apiRequest<{ device: any }>('/devices', { method: 'POST', body: JSON.stringify(data) }),
-        updateConfig: (id: string, config: any) => apiRequest<{ device: any }>(`/devices/${id}/config`, { method: 'PUT', body: JSON.stringify(config) }),
-        sendCommand: (id: string, command: string, payload?: any) => apiRequest<{ command: any }>(`/devices/${id}/command`, { method: 'POST', body: JSON.stringify({ command, payload }) }),
-        health: (id: string) => apiRequest<{ health: any }>(`/devices/${id}/health`),
-    },
-    alerts: {
-        list: (params?: { vehicleId?: string; status?: string; type?: string }) => {
-            const query = new URLSearchParams(params as any).toString();
-            return apiRequest<{ alerts: any[] }>(`/alerts?${query}`);
-        },
-        get: (id: string) => apiRequest<{ alert: any }>(`/alerts/${id}`),
-        resolve: (id: string, notes?: string, status?: string) => apiRequest<{ success: boolean }>(`/alerts/${id}/resolve`, { method: 'PUT', body: JSON.stringify({ notes, status: status || 'resolved' }) }),
-        stats: () => apiRequest<{ stats: any }>('/alerts/stats'),
-    },
-    dashboard: {
-        summary: () => apiRequest<{ stats: any }>('/dashboard/summary'),
-    },
-};
+export const api = new ApiClient(API_BASE_URL);

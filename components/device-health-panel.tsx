@@ -1,124 +1,132 @@
-"use client"
+"use client";
 
-import { Battery, Signal, Timer } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Activity, Wifi, Battery, Signal } from "lucide-react";
+import { api } from "@/lib/api";
+import { isDemoMode } from "@/lib/firebase";
 
-// Mock device health data
-const devices = [
-  {
-    id: "ESP32-123",
-    vehicleId: "VEH-123",
-    rssi: -67,
-    battery: 78,
-    lastSync: "5 min ago",
-    status: "active",
-  },
-  {
-    id: "ESP32-456",
-    vehicleId: "VEH-456",
-    rssi: -72,
-    battery: 45,
-    lastSync: "12 min ago",
-    status: "active",
-  },
-  {
-    id: "ESP32-789",
-    vehicleId: "VEH-789",
-    rssi: -58,
-    battery: 92,
-    lastSync: "3 min ago",
-    status: "active",
-  },
-  {
-    id: "ESP32-101",
-    vehicleId: "VEH-101",
-    rssi: -85,
-    battery: 23,
-    lastSync: "1 min ago",
-    status: "error",
-  },
-]
+interface DeviceHealth {
+    id: string;
+    deviceId: string;
+    vehicleId: string;
+    status: "online" | "offline";
+    battery: number;
+    signal: number;
+    lastPing: Date;
+}
 
-export default function DeviceHealthPanel() {
-  // Function to determine signal strength based on RSSI
-  const getSignalStrength = (rssi: number) => {
-    if (rssi > -70) return { label: "Excellent", color: "bg-green-500" }
-    if (rssi > -80) return { label: "Good", color: "bg-amber-500" }
-    return { label: "Poor", color: "bg-red-500" }
-  }
+const MOCK_DEVICES: DeviceHealth[] = [
+    {
+        id: "dev-001",
+        deviceId: "ESP32-001",
+        vehicleId: "veh-001",
+        status: "online",
+        battery: 85,
+        signal: 92,
+        lastPing: new Date(),
+    },
+    {
+        id: "dev-002",
+        deviceId: "ESP32-002",
+        vehicleId: "veh-002",
+        status: "online",
+        battery: 72,
+        signal: 88,
+        lastPing: new Date(),
+    },
+    {
+        id: "dev-003",
+        deviceId: "ESP32-003",
+        vehicleId: "veh-003",
+        status: "offline",
+        battery: 45,
+        signal: 0,
+        lastPing: new Date(Date.now() - 3600000),
+    },
+];
 
-  return (
-    <ScrollArea className="h-[280px]">
-      <div className="space-y-4">
-        {devices.map((device) => {
-          const signal = getSignalStrength(device.rssi)
+export function DeviceHealthPanel() {
+    const [devices, setDevices] = useState<DeviceHealth[]>([]);
+    const [loading, setLoading] = useState(true);
 
-          return (
-            <div
-              key={device.id}
-              className={`rounded-lg border p-3 ${
-                device.status === "error" ? "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20" : ""
-              }`}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-medium">{device.id}</span>
-                <span className="text-xs text-muted-foreground">{device.vehicleId}</span>
-              </div>
+    useEffect(() => {
+        const fetchDevices = async () => {
+            if (isDemoMode) {
+                setDevices(MOCK_DEVICES);
+                setLoading(false);
+                return;
+            }
 
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Signal className="h-4 w-4 text-muted-foreground" />
-                    <span>Signal Strength</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className={`h-2 w-2 rounded-full ${signal.color}`}></div>
-                    <span>
-                      {signal.label} ({device.rssi} dBm)
-                    </span>
-                  </div>
+            try {
+                const response = await api.devices.list();
+                if (response.success && response.data) {
+                    setDevices(response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching devices:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDevices();
+    }, []);
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Device Health</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-pulse text-muted-foreground">Loading devices...</div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Device Health</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {devices.map((device) => (
+                        <div key={device.id} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-full ${device.status === "online" ? "bg-green-500/10" : "bg-gray-500/10"}`}>
+                                    <Activity className={`h-4 w-4 ${device.status === "online" ? "text-green-500" : "text-gray-500"}`} />
+                                </div>
+                                <div>
+                                    <div className="font-medium">{device.deviceId}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Last ping: {new Date(device.lastPing).toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                    <Battery className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">{device.battery}%</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Signal className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">{device.signal}%</span>
+                                </div>
+                                <Badge variant={device.status === "online" ? "default" : "secondary"}>
+                                    {device.status}
+                                </Badge>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Battery className="h-4 w-4 text-muted-foreground" />
-                    <span>Battery Level</span>
-                  </div>
-                  <span>{device.battery}%</span>
-                </div>
-
-                <Progress
-                  value={device.battery}
-                  className="h-1.5"
-                  indicatorClassName={
-                    device.battery < 25 ? "bg-red-500" : device.battery < 50 ? "bg-amber-500" : "bg-green-500"
-                  }
-                />
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Timer className="h-4 w-4 text-muted-foreground" />
-                    <span>Last Sync</span>
-                  </div>
-                  <span>{device.lastSync}</span>
-                </div>
-              </div>
-
-              <div className="mt-2 text-sm">
-                <span className="font-medium">Status:</span>{" "}
-                <span
-                  className={
-                    device.status === "active" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                  }
-                >
-                  {device.status === "active" ? "Active" : "Error"}
-                </span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </ScrollArea>
-  )
+            </CardContent>
+        </Card>
+    );
 }

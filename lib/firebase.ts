@@ -1,7 +1,8 @@
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 
+// Firebase configuration from environment variables
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -11,27 +12,24 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Check if Firebase config is valid (not demo/placeholder)
-const isValidConfig = firebaseConfig.apiKey &&
-    !firebaseConfig.apiKey.includes('demo') &&
-    firebaseConfig.projectId &&
-    !firebaseConfig.projectId.includes('demo');
+// Check if we're in demo mode (missing Firebase config)
+const isDemoMode = !firebaseConfig.apiKey || firebaseConfig.apiKey === "demo";
 
-// Initialize Firebase only if config is valid
-let app;
-let auth;
-let db;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-if (isValidConfig) {
-    try {
-        app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-        auth = getAuth(app);
-        db = getFirestore(app);
-    } catch (error) {
-        console.warn('Firebase initialization failed:', error);
-        console.warn('Running in mock data mode');
-    }
+if (isDemoMode) {
+    console.warn("⚠️ Running in DEMO MODE - Firebase not configured. Using mock data.");
+    // Create placeholder objects for demo mode
+    app = {} as FirebaseApp;
+    auth = {} as Auth;
+    db = {} as Firestore;
+} else {
+    // Initialize Firebase only if not already initialized
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    auth = getAuth(app);
+    db = getFirestore(app);
 }
 
-export { app, auth, db };
-export default app;
+export { app, auth, db, isDemoMode };

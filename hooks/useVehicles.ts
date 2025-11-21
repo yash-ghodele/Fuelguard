@@ -1,77 +1,113 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+"use client";
 
-interface Vehicle {
+import { useEffect, useState } from "react";
+import { collection, query, where, onSnapshot, QuerySnapshot, DocumentData } from "firebase/firestore";
+import { db, isDemoMode } from "@/lib/firebase";
+import { useAuth } from "./useAuth";
+
+export interface Vehicle {
     id: string;
-    licensePlate: string;
-    make: string;
+    plateNumber: string;
     model: string;
-    year: number;
-    tankCapacity: number;
-    deviceId?: string;
-    status: 'online' | 'offline';
-    driver?: string;
+    status: "online" | "offline";
+    fuelLevel: number;
+    location?: {
+        lat: number;
+        lng: number;
+        address?: string;
+    };
+    lastUpdate: Date;
+    deviceId: string;
 }
 
-/**
- * React hook for real-time vehicle data
- */
+// Mock data for demo mode
+const MOCK_VEHICLES: Vehicle[] = [
+    {
+        id: "veh-001",
+        plateNumber: "XYZ-123",
+        model: "Truck Alpha",
+        status: "online",
+        fuelLevel: 75,
+        location: { lat: 19.076, lng: 72.8777, address: "Mumbai, MH" },
+        lastUpdate: new Date(),
+        deviceId: "ESP32-001",
+    },
+    {
+        id: "veh-002",
+        plateNumber: "ABC-456",
+        model: "Truck Beta",
+        status: "online",
+        fuelLevel: 45,
+        location: { lat: 28.7041, lng: 77.1025, address: "Delhi, DL" },
+        lastUpdate: new Date(),
+        deviceId: "ESP32-002",
+    },
+    {
+        id: "veh-003",
+        plateNumber: "MNO-789",
+        model: "Truck Gamma",
+        status: "offline",
+        fuelLevel: 90,
+        location: { lat: 12.9716, lng: 77.5946, address: "Bangalore, KA" },
+        lastUpdate: new Date(Date.now() - 3600000),
+        deviceId: "ESP32-003",
+    },
+];
+
 export function useVehicles() {
+    const { orgId } = useAuth();
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const user = auth.currentUser;
-        if (!user) {
+        if (isDemoMode) {
+            // Use mock data in demo mode
+            setVehicles(MOCK_VEHICLES);
             setLoading(false);
             return;
         }
 
-        // Get user's organization
-        const userRef = collection(db, 'users');
-        const userQuery = query(userRef, where('__name__', '==', user.uid));
+        if (!orgId) {
+            setVehicles([]);
+            setLoading(false);
+            return;
+        }
 
-        const unsubscribeUser = onSnapshot(userQuery, (userSnapshot) => {
-            if (userSnapshot.empty) {
-                setLoading(false);
-                return;
-            }
+        setLoading(true);
+        setError(null);
 
-            const userData = userSnapshot.docs[0].data();
-            const organizationId = userData.organizationId;
+        const vehiclesRef = collection(db, "vehicles");
+        const q = query(vehiclesRef, where("organizationId", "==", orgId));
 
-            // Subscribe to vehicles in organization
-            const vehiclesRef = collection(db, 'vehicles');
-            const vehiclesQuery = query(
-                vehiclesRef,
-                where('organizationId', '==', organizationId),
-                orderBy('createdAt', 'desc')
-            );
-
-            const unsubscribeVehicles = onSnapshot(
-                vehiclesQuery,
-                (snapshot) => {
-                    const vehicleData = snapshot.docs.map((doc) => ({
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot: QuerySnapshot<DocumentData>) => {
+                const vehiclesData: Vehicle[] = snapshot.docs.map((doc) => {
+                    const data = doc.data();
+                    return {
                         id: doc.id,
-                        ...doc.data(),
-                    })) as Vehicle[];
+                        plateNumber: data.plateNumber,
+                        model: data.model,
+                        status: data.status,
+                        fuelLevel: data.fuelLevel || 0,
+                        location: data.location,
+                        lastUpdate: data.lastUpdate?.toDate() || new Date(),
+                        deviceId: data.deviceId,
+                    };
+                });
+                setVehicles(vehiclesData);
+                setLoading(false);
+            },
+            (err) => {
+                console.error("Error fetching vehicles:", err);
+                setError(err.message);
+                setLoading(false);
+            }
+        );
 
-                    setVehicles(vehicleData);
-                    setLoading(false);
-                },
-                (err) => {
-                    setError(err as Error);
-                    setLoading(false);
-                }
-            );
-
-            return () => unsubscribeVehicles();
-        });
-
-        return () => unsubscribeUser();
-    }, []);
+        return () => unsubscribe();
+    }, [orgId]);
 
     return { vehicles, loading, error };
 }

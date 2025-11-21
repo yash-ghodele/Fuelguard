@@ -1,145 +1,172 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
-import { AlertTriangle, Droplet, Signal, Trash2, WifiOff } from "lucide-react"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Bell, Check, Clock } from "lucide-react";
+import { api } from "@/lib/api";
+import { isDemoMode } from "@/lib/firebase";
 
-// Mock notification data
-const initialNotifications = [
-  {
-    id: "n1",
-    type: "fuel-drop",
-    vehicleId: "VEH-101",
-    message: "Unusual fuel drop detected",
-    timestamp: "10 min ago",
-    isRead: false,
-  },
-  {
-    id: "n2",
-    type: "refill",
-    vehicleId: "VEH-456",
-    message: "Fuel refill detected",
-    timestamp: "1 hr ago",
-    isRead: true,
-  },
-  {
-    id: "n3",
-    type: "gps-loss",
-    vehicleId: "VEH-789",
-    message: "GPS signal lost",
-    timestamp: "3 hrs ago",
-    isRead: false,
-  },
-  {
-    id: "n4",
-    type: "sensor-disconnect",
-    vehicleId: "VEH-123",
-    message: "Sensor disconnected",
-    timestamp: "5 hrs ago",
-    isRead: false,
-  },
-]
+interface Notification {
+    id: string;
+    title: string;
+    message: string;
+    timestamp: Date;
+    read: boolean;
+    type: "info" | "warning" | "success";
+}
 
-export default function NotificationsPanel() {
-  const [notifications, setNotifications] = useState(initialNotifications)
+const MOCK_NOTIFICATIONS: Notification[] = [
+    {
+        id: "notif-001",
+        title: "Fuel Alert",
+        message: "Vehicle XYZ-123 fuel level dropped below 20%",
+        timestamp: new Date(Date.now() - 1800000),
+        read: false,
+        type: "warning",
+    },
+    {
+        id: "notif-002",
+        title: "Device Online",
+        message: "ESP32-002 reconnected successfully",
+        timestamp: new Date(Date.now() - 3600000),
+        read: false,
+        type: "success",
+    },
+    {
+        id: "notif-003",
+        title: "System Update",
+        message: "Dashboard updated with new features",
+        timestamp: new Date(Date.now() - 7200000),
+        read: true,
+        type: "info",
+    },
+];
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "fuel-drop":
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />
-      case "refill":
-        return <Droplet className="h-4 w-4 text-green-500" />
-      case "gps-loss":
-        return <Signal className="h-4 w-4 text-red-500" />
-      case "sensor-disconnect":
-        return <WifiOff className="h-4 w-4 text-red-500" />
-      default:
-        return <AlertTriangle className="h-4 w-4" />
-    }
-  }
+export function NotificationsPanel() {
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })))
-  }
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            if (isDemoMode) {
+                setNotifications(MOCK_NOTIFICATIONS);
+                setLoading(false);
+                return;
+            }
 
-  const clearNotification = (id: string) => {
-    setNotifications(notifications.filter((n) => n.id !== id))
-  }
+            try {
+                const response = await api.notifications.list();
+                if (response.success && response.data) {
+                    setNotifications(response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching notifications:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  const clearAllNotifications = () => {
-    setNotifications([])
-  }
+        fetchNotifications();
+    }, []);
 
-  return (
-    <div className="flex h-[280px] flex-col">
-      <div className="flex items-center justify-between pb-2">
-        <span className="text-sm font-medium">{notifications.filter((n) => !n.isRead).length} Unread</span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            onClick={markAllAsRead}
-            disabled={!notifications.some((n) => !n.isRead)}
-          >
-            Mark all read
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            onClick={clearAllNotifications}
-            disabled={notifications.length === 0}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
+    const handleMarkRead = async (id: string) => {
+        try {
+            await api.notifications.markRead(id);
+            setNotifications((prev) =>
+                prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+            );
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+        }
+    };
 
-      <ScrollArea className="flex-1">
-        <AnimatePresence>
-          {notifications.length === 0 ? (
-            <div className="flex h-32 flex-col items-center justify-center p-4">
-              <p className="text-center text-sm text-muted-foreground">No notifications</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {notifications.map((notification) => (
-                <motion.div
-                  key={notification.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`relative rounded-md border p-2 ${
-                    !notification.isRead ? "border-primary/50 bg-primary/5" : ""
-                  }`}
-                >
-                  <div className="flex justify-between">
-                    <div className="flex items-center gap-2">
-                      {getIcon(notification.type)}
-                      <span className="font-medium">{notification.vehicleId}</span>
+    const handleMarkAllRead = async () => {
+        try {
+            await api.notifications.markAllRead();
+            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        } catch (error) {
+            console.error("Error marking all notifications as read:", error);
+        }
+    };
+
+    const unreadCount = notifications.filter((n) => !n.read).length;
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Notifications</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-pulse text-muted-foreground">Loading notifications...</div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 rounded-full"
-                      onClick={() => clearNotification(notification.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                  <p className="mt-1 text-sm">{notification.message}</p>
-                  <p className="text-xs text-muted-foreground">{notification.timestamp}</p>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </AnimatePresence>
-      </ScrollArea>
-    </div>
-  )
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span>Notifications</span>
+                        {unreadCount > 0 && (
+                            <Badge variant="destructive">{unreadCount}</Badge>
+                        )}
+                    </div>
+                    {unreadCount > 0 && (
+                        <Button size="sm" variant="outline" onClick={handleMarkAllRead}>
+                            Mark all read
+                        </Button>
+                    )}
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {notifications.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                            <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No notifications</p>
+                        </div>
+                    ) : (
+                        notifications.map((notification) => (
+                            <div
+                                key={notification.id}
+                                className={`flex items-start justify-between p-3 rounded-lg border ${!notification.read ? "bg-primary/5 border-primary/20" : ""
+                                    }`}
+                            >
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium">{notification.title}</span>
+                                        {!notification.read && (
+                                            <Badge variant="default" className="h-5">New</Badge>
+                                        )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                        <Clock className="h-3 w-3" />
+                                        <span>{new Date(notification.timestamp).toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                {!notification.read && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleMarkRead(notification.id)}
+                                    >
+                                        <Check className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
 }

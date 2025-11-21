@@ -1,91 +1,129 @@
-import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+"use client";
 
-interface Alert {
+import { useEffect, useState } from "react";
+import { collection, query, where, orderBy, onSnapshot, QuerySnapshot, DocumentData } from "firebase/firestore";
+import { db, isDemoMode } from "@/lib/firebase";
+import { useAuth } from "./useAuth";
+
+export interface Alert {
     id: string;
     vehicleId: string;
-    deviceId: string;
-    type: 'fuel_theft' | 'tampering' | 'sensor_error';
-    fuelLoss: number;
-    location: { lat: number; lon: number } | null;
-    status: 'active' | 'resolved' | 'false_positive';
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    detectedAt: number;
-    resolvedAt?: number;
+    type: "theft" | "low_fuel" | "device_offline" | "maintenance";
+    severity: "critical" | "warning" | "info";
+    message: string;
+    timestamp: Date;
+    status: "active" | "resolved";
+    resolvedAt?: Date;
+    resolvedBy?: string;
 }
 
-/**
- * React hook for real-time alerts
- */
-export function useAlerts(vehicleId?: string, activeOnly = true) {
+// Mock data for demo mode
+const MOCK_ALERTS: Alert[] = [
+    {
+        id: "alert-001",
+        vehicleId: "veh-001",
+        type: "theft",
+        severity: "critical",
+        message: "Sudden fuel drop detected: 75% to 45% in 5 minutes",
+        timestamp: new Date(Date.now() - 1800000),
+        status: "active",
+    },
+    {
+        id: "alert-002",
+        vehicleId: "veh-002",
+        type: "low_fuel",
+        severity: "warning",
+        message: "Fuel level below 20%",
+        timestamp: new Date(Date.now() - 3600000),
+        status: "active",
+    },
+    {
+        id: "alert-003",
+        vehicleId: "veh-003",
+        type: "device_offline",
+        severity: "warning",
+        message: "Device offline for more than 1 hour",
+        timestamp: new Date(Date.now() - 7200000),
+        status: "resolved",
+        resolvedAt: new Date(Date.now() - 3600000),
+        resolvedBy: "admin@fuelguard.com",
+    },
+];
+
+interface UseAlertsOptions {
+    vehicleId?: string;
+    status?: "active" | "resolved";
+}
+
+export function useAlerts(options: UseAlertsOptions = {}) {
+    const { orgId } = useAuth();
     const [alerts, setAlerts] = useState<Alert[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const user = auth.currentUser;
-        if (!user) {
+        if (isDemoMode) {
+            // Filter mock data based on options
+            let filteredAlerts = MOCK_ALERTS;
+            if (options.vehicleId) {
+                filteredAlerts = filteredAlerts.filter(a => a.vehicleId === options.vehicleId);
+            }
+            if (options.status) {
+                filteredAlerts = filteredAlerts.filter(a => a.status === options.status);
+            }
+            setAlerts(filteredAlerts);
             setLoading(false);
             return;
         }
 
-        // Get user's organization
-        const userRef = collection(db, 'users');
-        const userQuery = query(userRef, where('__name__', '==', user.uid));
+        if (!orgId) {
+            setAlerts([]);
+            setLoading(false);
+            return;
+        }
 
-        const unsubscribeUser = onSnapshot(userQuery, (userSnapshot) => {
-            if (userSnapshot.empty) {
-                setLoading(false);
-                return;
-            }
+        setLoading(true);
+        setError(null);
 
-            const userData = userSnapshot.docs[0].data();
-            const organizationId = userData.organizationId;
+        const alertsRef = collection(db, "alerts");
+        let q = query(alertsRef, where("organizationId", "==", orgId), orderBy("timestamp", "desc"));
 
-            // Build alerts query
-            const alertsRef = collection(db, 'alerts');
-            let alertsQuery = query(
-                alertsRef,
-                where('organizationId', '==', organizationId)
-            );
+        if (options.vehicleId) {
+            q = query(q, where("vehicleId", "==", options.vehicleId));
+        }
+        if (options.status) {
+            q = query(q, where("status", "==", options.status));
+        }
 
-            if (vehicleId) {
-                alertsQuery = query(alertsQuery, where('vehicleId', '==', vehicleId));
-            }
-
-            if (activeOnly) {
-                alertsQuery = query(alertsQuery, where('status', '==', 'active'));
-            }
-
-            alertsQuery = query(
-                alertsQuery,
-                orderBy('detectedAt', 'desc'),
-                limit(50)
-            );
-
-            const unsubscribeAlerts = onSnapshot(
-                alertsQuery,
-                (snapshot) => {
-                    const alertData = snapshot.docs.map((doc) => ({
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot: QuerySnapshot<DocumentData>) => {
+                const alertsData: Alert[] = snapshot.docs.map((doc) => {
+                    const data = doc.data();
+                    return {
                         id: doc.id,
-                        ...doc.data(),
-                    })) as Alert[];
+                        vehicleId: data.vehicleId,
+                        type: data.type,
+                        severity: data.severity,
+                        message: data.message,
+                        timestamp: data.timestamp?.toDate() || new Date(),
+                        status: data.status,
+                        resolvedAt: data.resolvedAt?.toDate(),
+                        resolvedBy: data.resolvedBy,
+                    };
+                });
+                setAlerts(alertsData);
+                setLoading(false);
+            },
+            (err) => {
+                console.error("Error fetching alerts:", err);
+                setError(err.message);
+                setLoading(false);
+            }
+        );
 
-                    setAlerts(alertData);
-                    setLoading(false);
-                },
-                (err) => {
-                    setError(err as Error);
-                    setLoading(false);
-                }
-            );
-
-            return () => unsubscribeAlerts();
-        });
-
-        return () => unsubscribeUser();
-    }, [vehicleId, activeOnly]);
+        return () => unsubscribe();
+    }, [orgId, options.vehicleId, options.status]);
 
     return { alerts, loading, error };
 }

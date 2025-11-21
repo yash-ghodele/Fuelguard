@@ -1,110 +1,103 @@
-"use client"
+"use client";
 
-import { Check, ChevronsUpDown } from "lucide-react"
-import { useState } from "react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Truck, MapPin, Droplets } from "lucide-react";
+import { useVehicles } from "@/hooks/useVehicles";
 
-// Mock vehicle data
-const vehicles = [
-  { value: "veh-123", label: "XYZ-123", status: "online" },
-  { value: "veh-456", label: "ABC-456", status: "online" },
-  { value: "veh-789", label: "MNO-789", status: "online" },
-  { value: "veh-101", label: "PQR-101", status: "offline" },
-  { value: "veh-112", label: "STU-112", status: "offline" },
-]
+export function VehicleSelector() {
+    const { vehicles, loading, error } = useVehicles();
+    const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
-interface VehicleSelectorProps {
-  selectedVehicle: string | null
-  setSelectedVehicle: (vehicleId: string | null) => void
-}
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Fleet Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center py-8">
+                        <div className="animate-pulse text-muted-foreground">Loading vehicles...</div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
-export default function VehicleSelector({ selectedVehicle, setSelectedVehicle }: VehicleSelectorProps) {
-  const [open, setOpen] = useState(false)
+    if (error) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Fleet Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-sm text-destructive">Error loading vehicles: {error}</div>
+                </CardContent>
+            </Card>
+        );
+    }
 
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle>Vehicle Selector</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
-              {selectedVehicle
-                ? vehicles.find((vehicle) => vehicle.value === selectedVehicle)?.label
-                : "Select vehicle..."}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-full p-0">
-            <Command>
-              <CommandInput placeholder="Search vehicle..." />
-              <CommandList>
-                <CommandEmpty>No vehicle found.</CommandEmpty>
-                <CommandGroup>
-                  {vehicles.map((vehicle) => (
-                    <CommandItem
-                      key={vehicle.value}
-                      value={vehicle.value}
-                      onSelect={(currentValue) => {
-                        setSelectedVehicle(currentValue === selectedVehicle ? null : currentValue)
-                        setOpen(false)
-                      }}
-                    >
-                      <Check
-                        className={cn("mr-2 h-4 w-4", selectedVehicle === vehicle.value ? "opacity-100" : "opacity-0")}
-                      />
-                      <span className="flex-1">{vehicle.label}</span>
-                      <span
-                        className={cn(
-                          "ml-auto h-2 w-2 rounded-full",
-                          vehicle.status === "online" ? "bg-green-500" : "bg-red-500",
-                        )}
-                      />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Fleet Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {vehicles.length === 0 ? (
+                        <div className="text-sm text-muted-foreground text-center py-8">
+                            No vehicles found. Add vehicles to get started.
+                        </div>
+                    ) : (
+                        vehicles.map((vehicle) => (
+                            <div
+                                key={vehicle.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedVehicleId === vehicle.id
+                                        ? "border-primary bg-primary/5"
+                                        : "border-border hover:border-primary/50"
+                                    }`}
+                                onClick={() => setSelectedVehicleId(vehicle.id)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-full bg-primary/10">
+                                        <Truck className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div>
+                                        <div className="font-medium">{vehicle.plateNumber}</div>
+                                        <div className="text-sm text-muted-foreground">{vehicle.model}</div>
+                                    </div>
+                                </div>
 
-        <div className="mt-4 space-y-2">
-          <p className="text-sm font-medium">Vehicle Information</p>
-          {selectedVehicle ? (
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">ID:</span>
-                <span>{selectedVehicle}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Plate:</span>
-                <span>{vehicles.find((v) => v.value === selectedVehicle)?.label}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status:</span>
-                <span className="flex items-center">
-                  <span
-                    className={cn(
-                      "mr-1.5 inline-block h-2 w-2 rounded-full",
-                      vehicles.find((v) => v.value === selectedVehicle)?.status === "online"
-                        ? "bg-green-500"
-                        : "bg-red-500",
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1 text-sm">
+                                        <Droplets className="h-4 w-4 text-blue-500" />
+                                        <span className="font-medium">{vehicle.fuelLevel}%</span>
+                                    </div>
+
+                                    {vehicle.location && (
+                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                            <MapPin className="h-4 w-4" />
+                                            <span className="text-xs">{vehicle.location.address || "Unknown"}</span>
+                                        </div>
+                                    )}
+
+                                    <Badge
+                                        variant={vehicle.status === "online" ? "default" : "secondary"}
+                                        className={
+                                            vehicle.status === "online"
+                                                ? "bg-green-500 hover:bg-green-600"
+                                                : "bg-gray-500"
+                                        }
+                                    >
+                                        {vehicle.status}
+                                    </Badge>
+                                </div>
+                            </div>
+                        ))
                     )}
-                  />
-                  {vehicles.find((v) => v.value === selectedVehicle)?.status === "online" ? "Online" : "Offline"}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Select a vehicle to view details</p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
+                </div>
+            </CardContent>
+        </Card>
+    );
 }
