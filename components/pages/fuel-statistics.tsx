@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart3, TrendingDown, TrendingUp, DollarSign } from "lucide-react"
+import { BarChart3, TrendingDown, TrendingUp, DollarSign, Droplets } from "lucide-react"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts"
 
 const fuelConsumptionData = [
@@ -16,11 +16,19 @@ const fuelConsumptionData = [
 
 export default function FuelStatistics() {
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="container mx-auto p-6 space-y-6">
-            <h1 className="text-3xl font-bold">Fuel Statistics</h1>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full p-2 md:p-4 space-y-4">
+            <div className="flex items-center gap-4 rounded-xl bg-gradient-to-r from-purple-900/50 to-pink-900/50 p-6 border border-white/10 backdrop-blur-md">
+                <div className="p-3 rounded-full bg-purple-500/20 text-purple-400">
+                    <Droplets className="h-8 w-8" />
+                </div>
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Fuel Statistics</h1>
+                    <p className="text-purple-200">Analyze consumption trends and cost efficiency.</p>
+                </div>
+            </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-                <Card>
+                <Card className="glass-card hover-glow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Consumption</CardTitle>
                         <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -33,7 +41,7 @@ export default function FuelStatistics() {
                         </p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card hover-glow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Fuel Efficiency</CardTitle>
                         <TrendingDown className="h-4 w-4 text-muted-foreground" />
@@ -46,7 +54,7 @@ export default function FuelStatistics() {
                         </p>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="glass-card hover-glow">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Estimated Cost</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -61,7 +69,7 @@ export default function FuelStatistics() {
                 </Card>
             </div>
 
-            <Card className="col-span-4">
+            <Card className="col-span-4 glass-card hover-glow">
                 <CardHeader>
                     <CardTitle>Monthly Consumption & Cost</CardTitle>
                 </CardHeader>
@@ -72,12 +80,13 @@ export default function FuelStatistics() {
                                 <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
-                                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#ffffff20', color: '#f1f5f9' }}
+                                    itemStyle={{ color: '#e2e8f0' }}
+                                    cursor={{ fill: '#ffffff10' }}
                                 />
                                 <Legend />
-                                <Bar dataKey="consumption" name="Consumption (L)" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="cost" name="Cost ($)" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="consumption" name="Consumption (L)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="cost" name="Cost ($)" fill="#64748b" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

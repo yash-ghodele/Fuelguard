@@ -41,9 +41,44 @@ const vehicles = [
     lastUpdate: "8 min ago",
     theftStatus: false,
   },
+  {
+    id: "VEH-205",
+    fuelLevel: 88,
+    location: "Miami, FL",
+    lastUpdate: "2 min ago",
+    theftStatus: false,
+  },
+  {
+    id: "VEH-314",
+    fuelLevel: 15,
+    location: "Denver, CO",
+    lastUpdate: "Just now",
+    theftStatus: true,
+  },
+  {
+    id: "VEH-420",
+    fuelLevel: 55,
+    location: "Austin, TX",
+    lastUpdate: "15 min ago",
+    theftStatus: false,
+  },
+  {
+    id: "VEH-555",
+    fuelLevel: 98,
+    location: "San Francisco, CA",
+    lastUpdate: "10 min ago",
+    theftStatus: false,
+  },
+  {
+    id: "VEH-666",
+    fuelLevel: 34,
+    location: "Las Vegas, NV",
+    lastUpdate: "20 min ago",
+    theftStatus: false,
+  },
 ]
 
-export default function VehicleOverviewTable() {
+export function VehicleOverviewTable() {
   return (
     <div className="overflow-auto">
       <Table>
@@ -64,9 +99,8 @@ export default function VehicleOverviewTable() {
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-full max-w-24 rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full ${
-                        vehicle.fuelLevel < 25 ? "bg-red-500" : vehicle.fuelLevel < 50 ? "bg-amber-500" : "bg-green-500"
-                      }`}
+                      className={`h-full rounded-full ${vehicle.fuelLevel < 25 ? "bg-red-500" : vehicle.fuelLevel < 50 ? "bg-amber-500" : "bg-green-500"
+                        }`}
                       style={{ width: `${vehicle.fuelLevel}%` }}
                     />
                   </div>

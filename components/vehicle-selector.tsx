@@ -6,9 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Truck, MapPin, Droplets } from "lucide-react";
 import { useVehicles } from "@/hooks/useVehicles";
 
-export function VehicleSelector() {
+interface VehicleSelectorProps {
+    selectedVehicle: string | null;
+    setSelectedVehicle: (vehicleId: string | null) => void;
+}
+
+export function VehicleSelector({ selectedVehicle, setSelectedVehicle }: VehicleSelectorProps) {
     const { vehicles, loading, error } = useVehicles();
-    const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+    // const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null); // Removed local state
 
     if (loading) {
         return (
@@ -53,11 +58,11 @@ export function VehicleSelector() {
                         vehicles.map((vehicle) => (
                             <div
                                 key={vehicle.id}
-                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedVehicleId === vehicle.id
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border hover:border-primary/50"
+                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${selectedVehicle === vehicle.id
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
                                     }`}
-                                onClick={() => setSelectedVehicleId(vehicle.id)}
+                                onClick={() => setSelectedVehicle(vehicle.id)}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-full bg-primary/10">

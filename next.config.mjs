@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Trigger rebuild
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,

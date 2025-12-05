@@ -16,12 +16,12 @@ import {
 
 export default function DashboardSidebar() {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader className="pb-4">
-        <div className="flex items-center justify-center py-4">
+        <div className="flex items-center justify-center py-4 group-data-[collapsible=icon]:py-2">
           <div className="flex items-center gap-2 text-xl font-bold">
-            <div className="h-8 w-8 rounded-full bg-primary"></div>
-            <span>FuelGuard</span>
+            <div className="h-8 w-8 rounded-full bg-primary shrink-0"></div>
+            <span className="group-data-[collapsible=icon]:hidden">FuelGuard</span>
           </div>
         </div>
       </SidebarHeader>
@@ -31,48 +31,56 @@ export default function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive>
-                  <a href="#">
+                <SidebarMenuButton asChild isActive tooltip="Dashboard" className="hover-glow">
+                  <a href="/dashboard">
                     <Home className="h-5 w-5" />
                     <span>Dashboard</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="#">
+                <SidebarMenuButton asChild tooltip="Vehicle Tracking" className="hover-glow">
+                  <a href="/vehicles">
                     <Car className="h-5 w-5" />
                     <span>Vehicle Tracking</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="#">
+                <SidebarMenuButton asChild tooltip="Fuel Statistics" className="hover-glow">
+                  <a href="/fuel-statistics">
                     <Droplets className="h-5 w-5" />
                     <span>Fuel Statistics</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="#">
+                <SidebarMenuButton asChild tooltip="Theft Alerts" className="hover-glow">
+                  <a href="/alerts">
                     <ShieldAlert className="h-5 w-5" />
                     <span>Theft Alerts</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="#">
+                <SidebarMenuButton asChild tooltip="Fleet Management" className="hover-glow">
+                  <a href="/fleet">
                     <Truck className="h-5 w-5" />
                     <span>Fleet Management</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="#">
+                <SidebarMenuButton asChild tooltip="Admin Panel" className="hover-glow">
+                  <a href="/admin">
+                    <ShieldAlert className="h-5 w-5 text-red-400" />
+                    <span>Admin Panel</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Settings" className="hover-glow">
+                  <a href="/settings">
                     <Settings className="h-5 w-5" />
                     <span>Settings</span>
                   </a>
@@ -81,7 +89,7 @@ export default function DashboardSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup>
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel>System Stats</SidebarGroupLabel>
           <SidebarGroupContent>
             <div className="space-y-2 p-2">

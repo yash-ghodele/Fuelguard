@@ -14,7 +14,7 @@ export default function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-30 border-b bg-background">
-      <div className="flex h-16 items-center px-4 md:px-6">
+      <div className="flex h-14 items-center px-2 md:px-4">
         <SidebarTrigger className="mr-2" />
         <div className="flex items-center gap-2 font-semibold">
           <div className="h-6 w-6 rounded-full bg-primary"></div>
@@ -56,9 +56,11 @@ export default function DashboardHeader() {
               <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <User className="h-5 w-5" />
-            <span className="sr-only">User profile</span>
+          <Button variant="ghost" size="icon" className="rounded-full" asChild>
+            <a href="/profile">
+              <User className="h-5 w-5" />
+              <span className="sr-only">User profile</span>
+            </a>
           </Button>
         </div>
       </div>

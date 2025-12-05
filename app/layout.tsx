@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "FuelGuard - Vehicle Monitoring Dashboard",
   description: "IoT vehicle monitoring dashboard for real-time fuel tracking",
-  generator: 'v0.dev'
+
 }
 
 export default function RootLayout({
