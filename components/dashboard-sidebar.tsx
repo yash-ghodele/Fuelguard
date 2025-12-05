@@ -25,7 +25,7 @@ export default function DashboardSidebar() {
           <div className="flex items-center gap-3 text-xl font-bold">
             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shrink-0 transition-all group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8"></div>
             <span className="group-data-[collapsible=icon]:hidden bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent transition-opacity duration-300">
-              FuelGuard
+              FuelShield
             </span>
           </div>
         </div>

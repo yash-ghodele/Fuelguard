@@ -1,10 +1,10 @@
-# FuelGuard Firmware 🔌
+# FuelShield Firmware 🔌
 
 IoT device firmware for vehicle monitoring and fuel sensing using ESP32/ESP8266.
 
 ## 📋 Overview
 
-This firmware enables real-time vehicle monitoring by reading fuel levels, GPS coordinates, and detecting tampering. Data is transmitted via MQTT to the FuelGuard cloud backend.
+This firmware enables real-time vehicle monitoring by reading fuel levels, GPS coordinates, and detecting tampering. Data is transmitted via MQTT to the FuelShield cloud backend.
 
 ---
 
@@ -83,7 +83,7 @@ Install via Arduino Library Manager:
    #define MQTT_PORT 1883
    #define MQTT_USERNAME ""
    #define MQTT_PASSWORD ""
-   #define MQTT_TOPIC "fuelguard/devices"
+   #define MQTT_TOPIC "FuelShield/devices"
    
    // Device Configuration
    #define DEVICE_ID "ESP32_001"
@@ -160,7 +160,7 @@ esp_deep_sleep_start();
 
 ### WiFi Setup
 - Device creates AP mode if connection fails
-- Connect to `FuelGuard-Setup` network
+- Connect to `FuelShield-Setup` network
 - Navigate to `192.168.4.1`
 - Enter WiFi credentials via web interface
 
@@ -168,14 +168,14 @@ esp_deep_sleep_start();
 ```cpp
 #include <ArduinoOTA.h>
 
-ArduinoOTA.setHostname("fuelguard-esp32");
+ArduinoOTA.setHostname("FuelShield-esp32");
 ArduinoOTA.setPassword("your_ota_password");
 ArduinoOTA.begin();
 ```
 
 Update firmware via network:
 ```bash
-arduino-cli upload -p network://fuelguard-esp32.local
+arduino-cli upload -p network://FuelShield-esp32.local
 ```
 
 ---
@@ -325,4 +325,4 @@ For firmware support, email yashghodele.work@gmail.com or open an issue on GitHu
 
 ---
 
-**Part of the FuelGuard project by Yash Ghodele**
+**Part of the FuelShield project by Yash Ghodele**

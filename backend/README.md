@@ -1,6 +1,6 @@
-# FuelGuard Backend 🔧
+# FuelShield Backend 🔧
 
-Backend services, APIs, and cloud functions for the FuelGuard vehicle monitoring system.
+Backend services, APIs, and cloud functions for the FuelShield vehicle monitoring system.
 
 ## 📋 Overview
 
@@ -246,7 +246,7 @@ firebase deploy --only functions
 ```bash
 # Deploy to your hosting provider
 # Or run as a service on your server
-pm2 start bridge/dist/index.js --name fuelguard-bridge
+pm2 start bridge/dist/index.js --name FuelShield-bridge
 ```
 
 ---
@@ -290,4 +290,4 @@ Follow the main project contribution guidelines.
 
 ---
 
-**Part of the FuelGuard project by Yash Ghodele**
+**Part of the FuelShield project by Yash Ghodele**

@@ -86,7 +86,7 @@ export default function LoginPage() {
                         <div className="h-14 w-14 rounded-2xl bg-primary/20 backdrop-blur-md border border-primary/50 flex items-center justify-center shadow-lg shadow-primary/20">
                             <Droplets className="h-8 w-8 text-primary" />
                         </div>
-                        <h1 className="text-4xl font-bold text-white tracking-tight">FuelGuard</h1>
+                        <h1 className="text-4xl font-bold text-white tracking-tight">FuelShield</h1>
                     </div>
                     <p className="text-gray-200 text-lg font-light">IoT Fuel Monitoring & Theft Prevention</p>
                 </div>

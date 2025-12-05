@@ -22,7 +22,7 @@ export default function DashboardHeader() {
         <div className="flex items-center gap-3 font-semibold">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 animate-pulse shadow-lg shadow-purple-500/50"></div>
           <span className="hidden md:inline-flex bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent font-bold text-lg">
-            FuelGuard
+            FuelShield
           </span>
         </div>
 
@@ -108,7 +108,7 @@ export default function DashboardHeader() {
             <DropdownMenuContent align="end" className="w-56 glass-card">
               <div className="p-2 border-b">
                 <p className="text-sm font-semibold">Admin User</p>
-                <p className="text-xs text-muted-foreground">admin@fuelguard.com</p>
+                <p className="text-xs text-muted-foreground">admin@FuelShield.com</p>
               </div>
               <DropdownMenuItem asChild className="cursor-pointer">
                 <a href="/profile" className="flex items-center gap-2">

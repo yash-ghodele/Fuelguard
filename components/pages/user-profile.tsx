@@ -27,7 +27,7 @@ export default function UserProfile() {
                         <h2 className="text-2xl font-bold tracking-tight text-white">Admin User</h2>
                         <div className="flex items-center gap-2">
                             <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Administrator</Badge>
-                            <span className="text-blue-200 text-sm">FuelGuard System</span>
+                            <span className="text-blue-200 text-sm">FuelShield System</span>
                         </div>
                     </div>
                 </div>
@@ -54,7 +54,7 @@ export default function UserProfile() {
                             <Label htmlFor="email">Email Address</Label>
                             <div className="relative">
                                 <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input id="email" defaultValue="admin@fuelguard.com" className="pl-8" />
+                                <Input id="email" defaultValue="admin@FuelShield.com" className="pl-8" />
                             </div>
                         </div>
                         <div className="grid gap-2">

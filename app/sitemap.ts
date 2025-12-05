@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://fuelguard.netlify.app' // Update with your Netlify URL
+    const baseUrl = 'https://fuelshield.netlify.app' // Update with your Netlify URL
 
     return [
         {

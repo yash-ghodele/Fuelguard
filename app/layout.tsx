@@ -8,16 +8,16 @@ import { Analytics } from '@vercel/analytics/react'
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://fuelguard.netlify.app'), // Update with your Netlify URL
+  metadataBase: new URL('https://FuelShield.netlify.app'), // Update with your Netlify URL
   title: {
-    default: "FuelGuard - Vehicle Monitoring Dashboard",
-    template: "%s | FuelGuard"
+    default: "FuelShield - Vehicle Monitoring Dashboard",
+    template: "%s | FuelShield"
   },
   description: "Real-time IoT-based vehicle tracking and fuel monitoring system. Monitor fuel levels, track vehicles, and prevent theft with advanced IoT sensors.",
   keywords: ["vehicle tracking", "fuel monitoring", "IoT", "fleet management", "GPS tracking", "fuel theft prevention"],
   authors: [{ name: "Yash Ghodele", url: "https://yash-ghodele.netlify.app" }],
   creator: "Yash Ghodele",
-  publisher: "FuelGuard",
+  publisher: "FuelShield",
   robots: {
     index: true,
     follow: true,
@@ -32,14 +32,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://fuelguard.netlify.app',
-    title: 'FuelGuard - Vehicle Monitoring Dashboard',
+    url: 'https://FuelShield.netlify.app',
+    title: 'FuelShield - Vehicle Monitoring Dashboard',
     description: 'Real-time IoT-based vehicle tracking and fuel monitoring system',
-    siteName: 'FuelGuard',
+    siteName: 'FuelShield',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FuelGuard - Vehicle Monitoring Dashboard',
+    title: 'FuelShield - Vehicle Monitoring Dashboard',
     description: 'Real-time IoT-based vehicle tracking and fuel monitoring system',
     creator: '@yashghodele',
   },

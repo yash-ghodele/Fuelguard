@@ -1,6 +1,6 @@
 {
-    "name": "FuelGuard",
-    "short_name": "FuelGuard",
+    "name": "FuelShield",
+    "short_name": "FuelShield",
     "description": "Real-time IoT-based vehicle tracking and fuel monitoring system",
     "start_url": "/",
     "display": "standalone",

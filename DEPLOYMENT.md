@@ -68,7 +68,7 @@ SENTRY_AUTH_TOKEN=your_sentry_auth_token
 
 ### After getting your URL, run these find-replace:
 ```
-Find: https://fuelguard.netlify.app
+Find: https://FuelShield.netlify.app
 Replace: https://your-actual-url.netlify.app
 ```
 

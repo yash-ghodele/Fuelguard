@@ -14,7 +14,7 @@ export default function DashboardFooter() {
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 shadow-lg dark:shadow-purple-500/50"></div>
               <div>
-                <p className="font-bold text-lg bg-gradient-to-r from-blue-500 to-pink-500 bg-clip-text text-transparent">FuelGuard</p>
+                <p className="font-bold text-lg bg-gradient-to-r from-blue-500 to-pink-500 bg-clip-text text-transparent">FuelShield</p>
                 <p className="text-xs text-muted-foreground">Vehicle Monitoring</p>
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function DashboardFooter() {
                 </a>
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                © {currentYear} FuelGuard. All rights reserved.
+                © {currentYear} FuelShield. All rights reserved.
               </p>
             </div>
 
